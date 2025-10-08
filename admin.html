@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel de Administración</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+
+<style>
+body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #FFF8F5;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+h1 {
+    font-family: 'Playfair Display', serif;
+    color: #FF6F91;
+    margin: 20px;
+}
+input, button, select {
+    margin: 5px;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+}
+button {
+    background-color: #FFB347;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+}
+button:hover { background-color: #FF9A4D; }
+#admin-panel { display: none; }
+.product-list {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 15px;
+    margin-top: 20px;
+}
+.product-card {
+    background-color: #FFF0F5;
+    border-radius: 10px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    padding: 10px;
+    width: 200px;
+}
+.preview {
+    display: block;
+    width: 120px;
+    margin: 10px auto;
+    border-radius: 10px;
+}
+</style>
+</head>
+<body>
+
+<h1>🔐 Panel de Administración</h1>
+
+<div id="login">
+    <input type="password" id="password" placeholder="Clave de acceso">
+    <button onclick="login()">Ingresar</button>
+</div>
+
+<div id="admin-panel">
+    <h2>Agregar / Editar Producto</h2>
+    <input type="text" id="nombre" placeholder="Nombre del producto"><br>
+    <input type="number" id="precio" placeholder="Precio"><br>
+    <select id="tipo">
+        <option value="peso">Por 100 g</option>
+        <option value="unidad">Por unidad</option>
+    </select><br>
+    <input type="file" id="imagenFile" accept="image/*" onchange="previewImage(event)"><br>
+    <img id="preview" class="preview" style="display:none;">
+    <button onclick="saveProduct()">Guardar</button>
+
+    <h2>Productos actuales</h2>
+    <div class="product-list" id="lista"></div>
+</div>
+
+<script>
+const CLAVE = "admin123";
+let productos = JSON.parse(localStorage.getItem('productos')) || [];
+let editIndex = -1;
+let currentImage = "";
+
+function login() {
+    const pass = document.getElementById('password').value;
+    if(pass === CLAVE){
+        document.getElementById('login').style.display = 'none';
+        document.getElementById('admin-panel').style.display = 'block';
+        renderList();
+    } else {
+        alert('Clave incorrecta');
+    }
+}
+
+function previewImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = document.getElementById('preview');
+        img.src = e.target.result;
+        img.style.display = 'block';
+        currentImage = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function saveProduct() {
+    const nombre = document.getElementById('nombre').value.trim();
+    const precio = parseFloat(document.getElementById('precio').value);
+    const tipo = document.getElementById('tipo').value;
+    if(!nombre || !precio){
+        alert('Completa todos los campos');
+        return;
+    }
+
+    if(editIndex >= 0){
+        productos[editIndex] = {
+            nombre,
+            precio,
+            tipo,
+            imagen: currentImage || productos[editIndex].imagen
+        };
+        editIndex = -1;
+    } else {
+        if(!currentImage){
+            alert('Debes seleccionar una imagen');
+            return;
+        }
+        productos.push({nombre, precio, tipo, imagen: currentImage});
+    }
+
+    localStorage.setItem('productos', JSON.stringify(productos));
+    clearForm();
+    renderList();
+}
+
+function clearForm() {
+    document.getElementById('nombre').value = '';
+    document.getElementById('precio').value = '';
+    document.getElementById('imagenFile').value = '';
+    document.getElementById('preview').style.display = 'none';
+    currentImage = '';
+}
+
+function renderList() {
+    const cont = document.getElementById('lista');
+    cont.innerHTML = '';
+    productos.forEach((p, i) => {
+        const tipoText = p.tipo === 'unidad' ? 'por unidad' : 'por 100g';
+        cont.innerHTML += `
+        <div class="product-card">
+            <img src="${p.imagen}" width="100%">
+            <h4>${p.nombre}</h4>
+            <p>$${p.precio} (${tipoText})</p>
+            <button onclick="editProduct(${i})">Editar</button>
+            <button onclick="deleteProduct(${i})">Eliminar</button>
+        </div>`;
+    });
+}
+
+function editProduct(index) {
+    const p = productos[index];
+    document.getElementById('nombre').value = p.nombre;
+    document.getElementById('precio').value = p.precio;
+    document.getElementById('tipo').value = p.tipo;
+    document.getElementById('preview').src = p.imagen;
+    document.getElementById('preview').style.display = 'block';
+    currentImage = p.imagen;
+    editIndex = index;
+}
+
+function deleteProduct(index) {
+    if(confirm('¿Eliminar este producto?')){
+        productos.splice(index, 1);
+        localStorage.setItem('productos', JSON.stringify(productos));
+        renderList();
+    }
+}
+</script>
+</body>
+</html>
